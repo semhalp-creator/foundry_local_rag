@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Foundry Local RAG Assistant</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 16px; }
+  input[type="text"] { width: 70%; padding: 8px; }
+  button { padding: 8px 16px; }
+  #answer { white-space: pre-wrap; margin-top: 16px; }
+  #sources { font-size: 0.9em; color: #555; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>Foundry Local RAG Assistant</h1>
+  <p>Ask a question about Foundry Local.</p>
+
+  <input type="text" id="question" placeholder="Ask a question..." />
+  <button id="askBtn" onclick="ask()">Ask</button>
+
+  <div id="answer"></div>
+  <div id="sources"></div>
+
+  <script>
+    async function ask() {
+      const question = document.getElementById("question").value.trim();
+      if (!question) return;
+
+      document.getElementById("answer").textContent = "Thinking...";
+      document.getElementById("sources").textContent = "";
+
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: question }),
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        document.getElementById("answer").textContent = data.error;
+        return;
+      }
+
+      document.getElementById("answer").textContent = data.answer;
+      const sources = [...new Set(data.chunks.map(function (c) { return c.source; }))];
+      document.getElementById("sources").textContent =
+        sources.length ? "Sources: " + sources.join(", ") : "";
+    }
+  </script>
+</body>
+</html>

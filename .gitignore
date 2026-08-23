@@ -1,0 +1,9 @@
+# Generated databases (rebuild with ingest.py / sqlite_practice.py)
+*.db
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Common editor/OS junk
+.DS_Store
