@@ -8,6 +8,7 @@ from flask import Flask, jsonify, render_template, request
 from foundry_local_sdk import Configuration, FoundryLocalManager
 
 from app import CHAT_MODEL_ID, EMBEDDING_MODEL_ID, answer_query, format_source_line
+from retrieval import KnowledgeBaseMissing, ensure_knowledge_base
 
 app = Flask(__name__)
 
@@ -84,6 +85,13 @@ def unload_models():
 
 
 if __name__ == "__main__":
+    # Same fail-fast check the CLI does: don't start a server that can only
+    # return errors, and don't spend ~15s loading models to find that out.
+    try:
+        ensure_knowledge_base()
+    except KnowledgeBaseMissing as exc:
+        raise SystemExit(exc)
+
     load_models()
     try:
         app.run(debug=False, port=5000)

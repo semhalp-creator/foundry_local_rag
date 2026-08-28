@@ -1,6 +1,10 @@
 from foundry_local_sdk import Configuration, FoundryLocalManager
 
-from retrieval import get_top_chunks  # Week 3's SQLite-backed retrieval
+from retrieval import (  # Week 3's SQLite-backed retrieval
+    KnowledgeBaseMissing,
+    ensure_knowledge_base,
+    get_top_chunks,
+)
 
 
 def format_source_line(results):
@@ -128,6 +132,14 @@ def answer_query(query, embedding_client, chat_client, top_k=2, verbose=True):
 
 
 def main():
+    # Check this before loading any models - they take ~15s, and there's no
+    # point paying that just to fail on the first question.
+    try:
+        ensure_knowledge_base()
+    except KnowledgeBaseMissing as exc:
+        print(exc)
+        return
+
     config = Configuration(app_name="foundry_local_rag")
     FoundryLocalManager.initialize(config)
     manager = FoundryLocalManager.instance

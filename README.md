@@ -89,7 +89,10 @@ python3 ingest.py
 ```
 
 This embeds the documents in `ingest.py` and writes them to `rag.db`,
-printing a count so you can verify nothing silently failed.
+printing a count so you can verify nothing silently failed. `rag.db` is
+generated (and gitignored), so a fresh clone always needs this step first —
+`app.py` and `web_app.py` check for it up front and tell you to run this if
+it's missing, rather than failing later on your first question.
 
 **2. Ask questions, either from the terminal:**
 

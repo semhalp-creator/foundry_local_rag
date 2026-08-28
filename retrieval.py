@@ -12,6 +12,42 @@ from main import cosine_similarity  # reuse the function we already wrote
 DB_PATH = str(Path(__file__).resolve().parent / "rag.db")
 
 
+class KnowledgeBaseMissing(RuntimeError):
+    """Raised when rag.db hasn't been built yet, or holds no documents."""
+
+
+def ensure_knowledge_base():
+    """Fail fast, with a clear message, if ingest.py hasn't been run yet.
+
+    rag.db is generated and gitignored, so a fresh clone starts with no
+    database at all. Without this check the first question dies on a raw
+    "sqlite3.OperationalError: no such table: documents" - and only after
+    the user has already waited ~15s for the models to load. Callers run
+    this *before* loading anything so the failure is instant and says what
+    to actually do about it.
+    """
+    hint = (
+        f"Knowledge base not found at {DB_PATH}.\n"
+        "Build it first with:  python3 ingest.py"
+    )
+    if not Path(DB_PATH).exists():
+        raise KnowledgeBaseMissing(hint)
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+    except sqlite3.OperationalError as exc:
+        raise KnowledgeBaseMissing(hint) from exc
+    finally:
+        conn.close()
+
+    if count == 0:
+        raise KnowledgeBaseMissing(
+            f"Knowledge base at {DB_PATH} is empty.\n"
+            "Rebuild it with:  python3 ingest.py"
+        )
+
+
 def load_documents(conn):
     """Load every (id, content, source, embedding) row from SQLite."""
     cursor = conn.execute("SELECT id, content, source, embedding FROM documents")
