@@ -2,20 +2,20 @@
 
 Chat model: `phi-3.5-mini` | Embedding model: `qwen3-embedding-0.6b`
 
-**Result: 8/8 test cases passed. Average response time: 1.70s.**
+**Result: 8/8 test cases passed. Average response time: 1.26s.**
 
 ## Functional test cases
 
 | # | Kind | Query | Result | Time (s) | Chunks | Answer (truncated) |
 |---|------|-------|--------|----------|--------|---------------------|
-| 1 | answerable | What programming languages does the SDK support? | ✅ PASS | 1.17 | 2 | The Foundry Local SDK supports Python, C#, JavaScript, and Rust programming languages. |
-| 2 | answerable | How does Foundry Local run models? | ✅ PASS | 2.44 | 2 | Foundry Local runs AI models directly on your device without the need for cloud connectivity. It ach... |
-| 3 | answerable | What is retrieval-augmented generation? | ✅ PASS | 2.60 | 2 | Retrieval-augmented generation is a method used in natural language processing where chat completion... |
-| 4 | answerable | What hardware acceleration does Foundry Local use? | ✅ PASS | 1.84 | 2 | Foundry Local uses hardware acceleration through ONNX Runtime for efficient model inference on both ... |
+| 1 | answerable | What programming languages does the SDK support? | ✅ PASS | 1.56 | 2 | According to Foundry Local FAQ, the Foundry Local SDK supports Python, C#, JavaScript, and Rust. |
+| 2 | answerable | How does Foundry Local run models? | ✅ PASS | 2.05 | 2 | According to Foundry Local FAQ, Foundry Local runs AI models directly on your device without the nee... |
+| 3 | answerable | What is retrieval-augmented generation? | ✅ PASS | 1.96 | 2 | According to Foundry Local FAQ, retrieval-augmented generation grounds model responses in your own d... |
+| 4 | answerable | What hardware acceleration does Foundry Local use? | ✅ PASS | 1.60 | 2 | According to the Foundry Local FAQ, Foundry Local uses ONNX Runtime for efficient model inference, w... |
 | 5 | unanswerable | What is the capital of France? | ✅ PASS | 0.04 | 0 | I don't have information about that in my knowledge base. |
 | 6 | unanswerable | What's the weather like today? | ✅ PASS | 0.03 | 0 | I don't have information about that in my knowledge base. |
 | 7 | unanswerable | bu gece hava kaç derece | ✅ PASS | 0.03 | 0 | I don't have information about that in my knowledge base. |
-| 8 | general | Tell me about Foundry Local. | ✅ PASS | 5.49 | 2 | Foundry Local is a platform that allows you to run Artificial Intelligence (AI) models directly on y... |
+| 8 | general | Tell me about Foundry Local. | ✅ PASS | 2.83 | 2 | Foundry Local is a platform that allows AI models to operate directly on your device without the nee... |
 
 ## Edge cases
 
@@ -24,7 +24,7 @@ Chat model: `phi-3.5-mini` | Embedding model: `qwen3-embedding-0.6b`
 
 ## Performance & debugging
 
-- Response times ranged 0.03s–5.49s, averaging 1.70s — within the plan's ~1-3s target for small models on a laptop.
+- Response times ranged 0.03s–2.83s, averaging 1.26s — within the plan's ~1-3s target for small models on a laptop.
 - Embeddings are not recomputed on every question: document chunks are embedded once in `ingest.py` and cached in `rag.db`; only the user's query is embedded per turn, which is unavoidable and cheap.
 - Formatting check (balanced parentheses, no doubled spaces) found no issues in any answer.
 - Retrieval check: every answerable test case passed its keyword check, consistent with (though not proof of) the retriever surfacing the right chunk each time; no incorrect-retrieval symptoms observed in this run.
@@ -32,9 +32,9 @@ Chat model: `phi-3.5-mini` | Embedding model: `qwen3-embedding-0.6b`
 ## Evaluation & improvement (self-critique)
 
 - **Accurate?** 8/8 test cases passed (correct answer when info was present, honest fallback when it wasn't).
-- **Well-written and concise?** Average answer length is 42 words (range 10-147); at least one answer is longer than ideal for a quick Q&A — could tighten the system prompt further (e.g. 'answer in 1-2 sentences').
-- **Are sources cited?** 5/8 answers carry a source line, built in code by `format_source_line()` from the chunks actually retrieved — the model is explicitly told not to name sources itself, so this can't drift from what was really used.
-  - Refinement idea: some answers (e.g. the 'I don't know' cases) correctly have nothing to cite, so a citation gap there is expected, not a defect — worth confirming case-by-case rather than assuming it's a bug.
+- **Well-written and concise?** Average answer length is 24 words (range 10-57); no answers ran noticeably long.
+- **Are sources cited?** 5/5 answers that had retrieved context named a real source from it. Citations are written by the model itself (prompt-based), then verified in the test against the chunks actually retrieved — a name that isn't in the context counts as fabricated, not cited.
+  - 3 answer(s) had no retrieved context at all (the MIN_RELEVANT_SCORE fallback fired), so there was correctly nothing to cite.
 
 ## Shortcomings / follow-ups identified
 

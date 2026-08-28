@@ -7,7 +7,7 @@ itself — this is purely an alternate interface on top of it.
 from flask import Flask, jsonify, render_template, request
 from foundry_local_sdk import Configuration, FoundryLocalManager
 
-from app import CHAT_MODEL_ID, EMBEDDING_MODEL_ID, answer_query, format_source_line
+from app import CHAT_MODEL_ID, EMBEDDING_MODEL_ID, answer_query
 from retrieval import KnowledgeBaseMissing, ensure_knowledge_base
 
 app = Flask(__name__)
@@ -62,13 +62,13 @@ def ask():
         return jsonify({"error": "Please enter a question."}), 400
 
     answer, chunks = answer_query(query, embedding_client, chat_client, verbose=False)
+    # The answer already carries its own citation (the model writes it from
+    # the source names in its context), so there's no separate source line
+    # here. `chunks` is still returned so a caller can see what was actually
+    # retrieved and check the citation against it.
     return jsonify(
         {
             "answer": answer,
-            # Built by the same helper the CLI uses, so both interfaces show
-            # an identically worded citation (or none at all) for the same
-            # answer - the page just renders this string as-is.
-            "source_line": format_source_line(chunks),
             "chunks": [
                 {"content": content, "source": source, "score": round(score, 3)}
                 for content, source, score in chunks

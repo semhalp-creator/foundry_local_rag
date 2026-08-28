@@ -8,7 +8,6 @@
   input[type="text"] { width: 70%; padding: 8px; }
   button { padding: 8px 16px; }
   #answer { white-space: pre-wrap; margin-top: 16px; }
-  #sources { font-size: 0.9em; color: #555; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -19,7 +18,6 @@
   <button id="askBtn" onclick="ask()">Ask</button>
 
   <div id="answer"></div>
-  <div id="sources"></div>
 
   <script>
     async function ask() {
@@ -27,7 +25,6 @@
       if (!question) return;
 
       document.getElementById("answer").textContent = "Thinking...";
-      document.getElementById("sources").textContent = "";
 
       const res = await fetch("/ask", {
         method: "POST",
@@ -36,15 +33,10 @@
       });
       const data = await res.json();
 
-      if (data.error) {
-        document.getElementById("answer").textContent = data.error;
-        return;
-      }
-
-      document.getElementById("answer").textContent = data.answer;
-      // The server builds this line (or sends null when there's nothing to
-      // cite), so the wording matches the CLI exactly.
-      document.getElementById("sources").textContent = data.source_line || "";
+      // The answer already names its own source, so there's nothing extra
+      // to render here.
+      document.getElementById("answer").textContent =
+        data.error || data.answer;
     }
   </script>
 </body>

@@ -7,25 +7,21 @@ from retrieval import (  # Week 3's SQLite-backed retrieval
 )
 
 
-def format_source_line(results):
-    """Build a single deterministic 'Source: ...' line from retrieved chunks.
+def cited_sources(answer, results):
+    """Which of the retrieved source names does the answer actually name?
 
-    We used to have the *model* write its own citation into the answer
-    text. That turned out to be unreliable in two ways: it sometimes added
-    a citation to an "I don't know" answer despite being told not to, and
-    it duplicated the source info we can already derive ourselves from
-    `results` - callers ended up showing both a model-written "Source:"
-    line and our own metadata-driven one side by side. This function is
-    the single source of truth instead: given the same `results` that
-    were actually retrieved and sent to the model, both the CLI (below)
-    and the web UI (via the `chunks` field in web_app.py's JSON response)
-    can build an identical, always-accurate citation from it - no need to
-    trust anything the model says about its own sources.
+    Citations are written by the model itself, from the source names shown
+    in its context (the plan's "adding instructions in the prompt"
+    approach). The model is told never to invent a name, but small models
+    don't always comply, so this lets the test suite check the claim rather
+    than trust it: a cited name that isn't in `results` is a fabrication.
     """
-    if not results:
-        return None
-    sources = list(dict.fromkeys(source for _content, source, _score in results))
-    return "Source: " + ", ".join(sources)
+    lower = answer.lower()
+    return [
+        source
+        for source in dict.fromkeys(s for _content, s, _score in results)
+        if source.lower() in lower
+    ]
 
 
 # Minimum cosine similarity a retrieved chunk needs before we trust it
@@ -55,14 +51,15 @@ def answer_query(query, embedding_client, chat_client, top_k=2, verbose=True):
     retrieval) into the chat model, using the same grounded system-prompt
     pattern from main.py.
 
-    Returns (answer_text, retrieved_chunks) so callers (like Week 5's test
-    harness, or web_app.py's JSON response) can inspect the result
-    programmatically and build their own source citation from
-    `retrieved_chunks` via format_source_line() - the model's answer text
-    itself never includes source names. `verbose=True` (the CLI's default)
-    prints the retrieved context, the answer, and that same deterministic
-    source line, buffered rather than streamed token-by-token so the
-    printed output always matches the returned value.
+    The answer text includes its own source citation, written by the model
+    from the source names in its context. Returns (answer_text,
+    retrieved_chunks) so callers (Week 5's test harness, web_app.py's JSON
+    response) can still inspect what was actually retrieved - and verify
+    the model's citation against it with cited_sources().
+
+    `verbose=True` (the CLI's default) prints the retrieved context and the
+    answer, buffered rather than streamed token-by-token so the printed
+    output always matches the returned value.
     """
     results = get_top_chunks(query, embedding_client, top_k=top_k)
 
@@ -96,8 +93,11 @@ def answer_query(query, embedding_client, chat_client, top_k=2, verbose=True):
             "role": "system",
             "content": (
                 "Answer the user's question using only the provided context below. "
-                "Be polite and concise. Do not mention or name your sources - "
-                "that's added separately, outside your answer. "
+                "Be polite and concise. "
+                "Each context line starts with its source name in parentheses. "
+                "Cite the source you used in your answer, e.g. "
+                "\"according to Foundry Local FAQ, ...\". Use only the source "
+                "names exactly as they appear in the context - never invent one. "
                 "If the context doesn't contain enough information, say so honestly "
                 "and stop there — do not add information from outside the context, "
                 "even as a suggestion or aside.\n\n"
@@ -122,11 +122,7 @@ def answer_query(query, embedding_client, chat_client, top_k=2, verbose=True):
     full_answer = "".join(answer_parts).strip()
 
     if verbose:
-        source_line = format_source_line(results)
-        print(f"Answer: {full_answer}")
-        if source_line:
-            print(source_line)
-        print()
+        print(f"Answer: {full_answer}\n")
 
     return full_answer, results
 

@@ -61,11 +61,19 @@ honest starting points from this project to adapt or replace:
   similarity-score cutoff so weak matches never reach the model at all.
   Good retrieval is the first line of defense against hallucination, not
   the prompt.
-- **Prompt instructions aren't guarantees.** Even after telling the model
-  explicitly not to add a citation on "I don't know" answers, it sometimes
-  did anyway. Small/local models don't follow every instruction reliably —
-  the fix was to double-check the important rules in code, not just trust
-  the prompt.
+- **A prompt that "doesn't work" may be a symptom, not the disease.** Asking
+  the model to cite its source was unreliable at first — it would cite on an
+  "I don't know" answer, or invent a source name. The instinct was to keep
+  rewording the prompt. What actually fixed it was the retrieval threshold:
+  once weak, irrelevant context stopped reaching the model, the *same*
+  prompt started citing correctly every time (5/5 in the latest run, none
+  fabricated). We only learned this by putting the original prompt back
+  after fixing retrieval, instead of assuming it was still broken.
+- **Trust, but verify — in the tests.** Citations are written by the model,
+  so they're a claim. `cited_sources()` checks each cited name against the
+  chunks that were really retrieved, and the test suite reports any
+  mismatch as fabricated. That way "are sources cited?" is measured, not
+  assumed.
 - **The order of operations matters in streaming code.** An early version
   checked `chunk.choices[0]` before checking whether `chunk.choices` was
   empty, which crashed on some stream chunks — a reminder that streaming
