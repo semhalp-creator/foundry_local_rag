@@ -2,16 +2,16 @@
 
 Chat model: `phi-3.5-mini` | Embedding model: `qwen3-embedding-0.6b`
 
-**Result: 8/8 test cases passed. Average response time: 1.26s.**
+**Result: 8/8 test cases passed. Average response time: 1.29s.**
 
 ## Functional test cases
 
 | # | Kind | Query | Result | Time (s) | Chunks | Answer (truncated) |
 |---|------|-------|--------|----------|--------|---------------------|
-| 1 | answerable | What programming languages does the SDK support? | ✅ PASS | 1.56 | 2 | According to Foundry Local FAQ, the Foundry Local SDK supports Python, C#, JavaScript, and Rust. |
-| 2 | answerable | How does Foundry Local run models? | ✅ PASS | 2.05 | 2 | According to Foundry Local FAQ, Foundry Local runs AI models directly on your device without the nee... |
-| 3 | answerable | What is retrieval-augmented generation? | ✅ PASS | 1.96 | 2 | According to Foundry Local FAQ, retrieval-augmented generation grounds model responses in your own d... |
-| 4 | answerable | What hardware acceleration does Foundry Local use? | ✅ PASS | 1.60 | 2 | According to the Foundry Local FAQ, Foundry Local uses ONNX Runtime for efficient model inference, w... |
+| 1 | answerable | What programming languages does the SDK support? | ✅ PASS | 1.48 | 2 | According to Foundry Local FAQ, the Foundry Local SDK supports Python, C#, JavaScript, and Rust. |
+| 2 | answerable | How does Foundry Local run models? | ✅ PASS | 2.07 | 2 | According to Foundry Local FAQ, Foundry Local runs AI models directly on your device without the nee... |
+| 3 | answerable | What is retrieval-augmented generation? | ✅ PASS | 2.09 | 2 | According to Foundry Local FAQ, retrieval-augmented generation grounds model responses in your own d... |
+| 4 | answerable | What hardware acceleration does Foundry Local use? | ✅ PASS | 1.76 | 2 | According to the Foundry Local FAQ, Foundry Local uses ONNX Runtime for efficient model inference, w... |
 | 5 | unanswerable | What is the capital of France? | ✅ PASS | 0.04 | 0 | I don't have information about that in my knowledge base. |
 | 6 | unanswerable | What's the weather like today? | ✅ PASS | 0.03 | 0 | I don't have information about that in my knowledge base. |
 | 7 | unanswerable | bu gece hava kaç derece | ✅ PASS | 0.03 | 0 | I don't have information about that in my knowledge base. |
@@ -24,7 +24,7 @@ Chat model: `phi-3.5-mini` | Embedding model: `qwen3-embedding-0.6b`
 
 ## Performance & debugging
 
-- Response times ranged 0.03s–2.83s, averaging 1.26s — within the plan's ~1-3s target for small models on a laptop.
+- Response times ranged 0.03s–2.83s, averaging 1.29s — within the plan's ~1-3s target for small models on a laptop.
 - Embeddings are not recomputed on every question: document chunks are embedded once in `ingest.py` and cached in `rag.db`; only the user's query is embedded per turn, which is unavoidable and cheap.
 - Formatting check (balanced parentheses, no doubled spaces) found no issues in any answer.
 - Retrieval check: every answerable test case passed its keyword check, consistent with (though not proof of) the retriever surfacing the right chunk each time; no incorrect-retrieval symptoms observed in this run.

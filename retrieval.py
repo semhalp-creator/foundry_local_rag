@@ -1,15 +1,30 @@
 import json
+import math
 import sqlite3
 from pathlib import Path
 
 from foundry_local_sdk import Configuration, FoundryLocalManager
-from main import cosine_similarity  # reuse the function we already wrote
 
 # Anchored to this file's directory, not the current working directory.
 # With a bare "rag.db", running the app from anywhere else would silently
 # create an empty database there and then fail with "no such table:
 # documents" - confusing, and it litters stray files around the filesystem.
 DB_PATH = str(Path(__file__).resolve().parent / "rag.db")
+
+
+def cosine_similarity(a, b):
+    """Compute cosine similarity between two vectors.
+
+    main.py has its own copy of this. That duplication is deliberate:
+    main.py is the Week 1-2 teaching file, meant to be read and tinkered
+    with, and it should stay runnable on its own. Importing this five-line
+    function from there would have made every experiment in a learning file
+    able to break the real app.
+    """
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(x * x for x in b))
+    return dot / (norm_a * norm_b) if norm_a and norm_b else 0.0
 
 
 class KnowledgeBaseMissing(RuntimeError):

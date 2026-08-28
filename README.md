@@ -53,7 +53,7 @@ which handles downloading, caching, and running the models on-device
 
 | File | Purpose |
 |---|---|
-| `main.py` | Week 1-2: the original in-memory version — embeds a hardcoded document list, does brute-force cosine similarity, no persistence. Not just a reference: `retrieval.py` imports `cosine_similarity` from it, so it's a real runtime dependency. |
+| `main.py` | Week 1-2: the whole idea in one file — a hardcoded document list, embeddings and similarity search in memory, no database. Nothing else imports it, so it stays safe to read and experiment with. |
 | `sqlite_practice.py` | Week 2: standalone SQLite mechanics practice (create table, insert, query by id and by keyword). Nothing imports it — it's the exercise that preceded the real pipeline. Writes `practice.db`. |
 | `ingest.py` | Week 3: chunks documents (`chunk_text()`), embeds them, and persists them (with a `source` name) to `rag.db`. Run this first. |
 | `retrieval.py` | Week 3: `get_top_chunks(query, ...)` — the SQLite-backed retrieval function, reused by both interfaces below. |

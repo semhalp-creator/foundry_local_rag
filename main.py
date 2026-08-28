@@ -1,3 +1,15 @@
+"""Week 1-2: the simplest version of the assistant, in one file.
+
+Everything lives in memory here - the documents, their embeddings, the
+similarity search - and is recomputed on every run. That's the point: it
+shows the whole RAG idea end to end with no database and no other modules
+to follow. Weeks 3-5 replace each piece (see ingest.py, retrieval.py,
+app.py), but this file stays runnable on its own so it can be read and
+experimented with freely.
+
+Nothing else in the project imports from this file. Feel free to change it.
+"""
+
 import math
 from foundry_local_sdk import Configuration, FoundryLocalManager
 
