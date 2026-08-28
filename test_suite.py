@@ -7,10 +7,15 @@ test_results.md — the plan's "Milestone by mid Week 5" deliverable.
 """
 
 import time
+from pathlib import Path
 
 from foundry_local_sdk import Configuration, FoundryLocalManager
 
 from app import CHAT_MODEL_ID, EMBEDDING_MODEL_ID, answer_query
+
+# Anchored to this file's directory so the report always lands next to the
+# code, not wherever the suite happened to be run from.
+REPORT_PATH = Path(__file__).resolve().parent / "test_results.md"
 
 # A mix of queries the knowledge base *can* answer, queries it *can't*
 # (should trigger the "I don't know" fallback), and one general/broad
@@ -59,6 +64,7 @@ TEST_CASES = [
     {
         "query": "Tell me about Foundry Local.",
         "kind": "general",
+        "expect_keywords": ["device", "local", "model"],
     },
 ]
 
@@ -110,12 +116,14 @@ def run_tests(embedding_client, chat_client):
         elapsed = time.time() - start
         answer = answer.strip()
 
-        if case["kind"] == "answerable":
-            passed = check_answerable(answer, case["expect_keywords"])
-        elif case["kind"] == "unanswerable":
+        if case["kind"] == "unanswerable":
             passed = check_unanswerable(answer)
-        else:  # "general" - no strict keyword check, just needs a real answer
-            passed = len(answer) > 0
+        else:
+            # Both "answerable" and "general" need a real, grounded answer.
+            # A bare `len(answer) > 0` check would have passed even when the
+            # MIN_RELEVANT_SCORE fallback fired and no model call happened at
+            # all, so the general case gets keyword-checked too.
+            passed = check_answerable(answer, case["expect_keywords"])
 
         results.append(
             {
@@ -254,8 +262,10 @@ def print_and_save_report(results, edge_cases):
                   + ("no answers ran noticeably long." if max(r["word_count"] for r in results) < 80
                      else "at least one answer is longer than ideal for a quick Q&A — "
                           "could tighten the system prompt further (e.g. 'answer in 1-2 sentences')."))
-    lines.append(f"- **Are sources cited?** {cited_count}/{len(results)} answers named "
-                  "a source from the retrieved context, as instructed by the system prompt.")
+    lines.append(f"- **Are sources cited?** {cited_count}/{len(results)} answers carry a "
+                  "source line, built in code by `format_source_line()` from the chunks "
+                  "actually retrieved — the model is explicitly told not to name sources "
+                  "itself, so this can't drift from what was really used.")
     if cited_count < len(results):
         lines.append(
             "  - Refinement idea: some answers (e.g. the 'I don't know' cases) "
@@ -286,9 +296,8 @@ def print_and_save_report(results, edge_cases):
     report = "\n".join(lines)
     print("\n" + report)
 
-    with open("test_results.md", "w") as f:
-        f.write(report + "\n")
-    print("\n\nSaved to test_results.md")
+    REPORT_PATH.write_text(report + "\n")
+    print(f"\n\nSaved to {REPORT_PATH.name}")
 
 
 def main():

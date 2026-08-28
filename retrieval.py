@@ -1,10 +1,15 @@
 import json
 import sqlite3
+from pathlib import Path
 
 from foundry_local_sdk import Configuration, FoundryLocalManager
 from main import cosine_similarity  # reuse the function we already wrote
 
-DB_PATH = "rag.db"
+# Anchored to this file's directory, not the current working directory.
+# With a bare "rag.db", running the app from anywhere else would silently
+# create an empty database there and then fail with "no such table:
+# documents" - confusing, and it litters stray files around the filesystem.
+DB_PATH = str(Path(__file__).resolve().parent / "rag.db")
 
 
 def load_documents(conn):

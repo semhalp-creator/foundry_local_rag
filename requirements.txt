@@ -1,0 +1,5 @@
+# Core SDK: on-device model download, loading, embeddings, and chat.
+foundry-local-sdk>=1.2.3
+
+# Only needed for the web UI (web_app.py). The CLI (app.py) runs without it.
+flask>=3.1.3

@@ -1,9 +1,12 @@
 import json
 import sqlite3
+from pathlib import Path
 
 from foundry_local_sdk import Configuration, FoundryLocalManager
 
-DB_PATH = "rag.db"
+# Anchored to this file's directory so ingest.py always writes to the same
+# database retrieval.py reads from, no matter where it's run from.
+DB_PATH = str(Path(__file__).resolve().parent / "rag.db")
 
 # Week 3: same knowledge base as main.py's in-memory list, but this time
 # each entry gets embedded once and persisted to SQLite instead of being

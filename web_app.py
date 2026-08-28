@@ -7,7 +7,7 @@ itself — this is purely an alternate interface on top of it.
 from flask import Flask, jsonify, render_template, request
 from foundry_local_sdk import Configuration, FoundryLocalManager
 
-from app import CHAT_MODEL_ID, EMBEDDING_MODEL_ID, answer_query
+from app import CHAT_MODEL_ID, EMBEDDING_MODEL_ID, answer_query, format_source_line
 
 app = Flask(__name__)
 
@@ -64,6 +64,10 @@ def ask():
     return jsonify(
         {
             "answer": answer,
+            # Built by the same helper the CLI uses, so both interfaces show
+            # an identically worded citation (or none at all) for the same
+            # answer - the page just renders this string as-is.
+            "source_line": format_source_line(chunks),
             "chunks": [
                 {"content": content, "source": source, "score": round(score, 3)}
                 for content, source, score in chunks

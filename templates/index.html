@@ -42,9 +42,9 @@
       }
 
       document.getElementById("answer").textContent = data.answer;
-      const sources = [...new Set(data.chunks.map(function (c) { return c.source; }))];
-      document.getElementById("sources").textContent =
-        sources.length ? "Sources: " + sources.join(", ") : "";
+      // The server builds this line (or sends null when there's nothing to
+      // cite), so the wording matches the CLI exactly.
+      document.getElementById("sources").textContent = data.source_line || "";
     }
   </script>
 </body>

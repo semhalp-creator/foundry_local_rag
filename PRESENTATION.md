@@ -70,10 +70,15 @@ honest starting points from this project to adapt or replace:
   checked `chunk.choices[0]` before checking whether `chunk.choices` was
   empty, which crashed on some stream chunks — a reminder that streaming
   APIs don't guarantee every chunk looks like the "normal" one.
-- **Chunking is easy to skip and easy to get wrong.** It was tempting to
-  just embed whole documents; splitting into passage-sized chunks (and
-  testing that a chunk from the *middle* of a longer document is still
-  retrievable) made retrieval noticeably more precise.
+- **Chunking is easy to skip — and worth verifying, not assuming.** It was
+  tempting to just embed whole documents. After splitting the longer document
+  into paragraph-sized chunks, we checked that a chunk from the *middle* of
+  it is genuinely reachable: asking "How does the SDK manage the model
+  lifecycle?" returns Overview part 2 as the top hit at 0.785, ahead of every
+  short FAQ line. (We never ran a before/after precision comparison, so
+  "chunking made retrieval better" stays an untested claim — what we can say
+  is that mid-document content is retrievable, which is the thing chunking
+  was supposed to buy us.)
 
 *(Swap in your own — these are seeded from what actually happened in this
 project's build log, not hypothetical.)*
