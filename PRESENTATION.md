@@ -1,99 +1,105 @@
 # Demo Day — Presentation Notes
 
-Outline for the final presentation, following the plan's four talking
-points. Aim for ~5 minutes: problem, features, live demo, lessons learned.
+This mirrors the final slide deck (5 slides, ~2 minutes) built for the Week 6
+milestone. It's a "what I learned building this" talk, first-person and
+honest about the starting point, not a feature pitch.
 
-## 1. Problem statement
+## 1. Cover — a Q&A assistant that works offline
 
-*What need does this assistant target?*
+**"An offline question-answering assistant."** RAG, entirely on-device:
+an embedding model + SQLite + a local ~3.8B-parameter chat model.
+Stack: Python 3.13, `foundry-local-sdk`, `sqlite3`, Flask.
 
-General-purpose chatbots either don't know about a narrow/private topic, or
-they'll confidently make something up rather than admit they don't know.
-This assistant answers questions **only** from a fixed local knowledge base
-(currently: Foundry Local facts), grounding every answer in retrieved text —
-and it runs **entirely offline**, so it works without an internet connection
-or sending any data to a cloud service.
+*I didn't know what RAG (Retrieval-Augmented Generation) meant when I
+started this six-week project. This talk is a short walk through what I
+built and what I learned along the way.*
 
-## 2. Key features / components
+## 2. I started by learning what RAG actually is
 
-- **Retrieval-Augmented Generation (RAG)**: questions are answered using
-  content retrieved from a knowledge base, not the model's own training
-  data — reduces hallucination, keeps answers grounded and up to date with
-  *our* documents.
-- **Fully local**: embedding model (`qwen3-embedding-0.6b`) and chat model
-  (`phi-3.5-mini`) both run on-device via Foundry Local. No API keys, no
-  network calls at inference time.
-- **Persistent knowledge base**: documents are chunked, embedded once, and
-  stored in a SQLite database (`rag.db`) — not recomputed on every run.
-- **Source citations**: answers name which document they drew on, so a user
-  can verify the claim rather than trusting it blindly.
-- **Two interfaces**: a CLI (`app.py`) and a minimal web UI (`web_app.py` +
-  Flask), both backed by the exact same `answer_query()` logic.
-- **Tested**: an automated suite (`test_suite.py`) checks answerable,
-  unanswerable, and general questions, plus response time, on every change.
+RAG answers from *our* data, not the model's memory:
 
-## 3. Live demo script
+| Step | What happens | Code |
+|---|---|---|
+| 01. Chunk | Split on paragraph boundaries | `chunk_text()` |
+| 02. Embed | Turn each chunk into a vector | `generate_embeddings()` |
+| 03. Retrieve | Cosine similarity finds the closest top-K | `get_top_chunks()` |
+| 04. Generate | The model writes using only that context | `answer_query()` |
 
-Run `python3 app.py` (or `web_app.py` for the browser version) and ask, in
-order:
+The problem RAG solves: ask a general model something about a narrow topic
+and it either doesn't know, or it hallucinates — makes up something
+confident-sounding instead. RAG fixes that in four steps, and the answer
+comes from my data, not the model's training set.
+
+## 3. I split the project into four layers
+
+| Layer | What it does | Tech |
+|---|---|---|
+| Client | CLI + web UI — both call the same core | `app.py` · `web_app.py` |
+| Server / pipeline | Embeds the query, builds context, writes the prompt | `answer_query()` |
+| Data | `documents(id, content, source, embedding)` — 11 rows | `rag.db` · `sqlite3` |
+| AI | `qwen3-embedding-0.6b` + `phi-3.5-mini` (~3.8B) | Foundry Local · ONNX |
+
+No HTTP requests at inference time — models are downloaded once and cached
+locally. The client layer is where I first saw how a backend and a frontend
+actually talk to each other (Flask serving HTML, JS calling it with
+`fetch`). The data layer is where I learned real SQL: creating a table,
+inserting rows, querying them.
+
+## 4. I learned cosine similarity has a use in retrieval
+
+```
+cos(θ) = a · b / (‖a‖ × ‖b‖)
+```
+
+I already knew this formula from math. What I didn't know is that it can
+measure how similar two pieces of *text* are: divide the dot product of two
+vectors by the product of their lengths, the length cancels out, and what's
+left is the angle — texts that mean similar things point in a similar
+direction.
+
+```python
+# retrieval.py
+def cosine_similarity(a, b):
+    dot = sum(x*y for x, y in zip(a, b))
+    na = sqrt(sum(x*x for x in a))
+    nb = sqrt(sum(x*x for x in b))
+    return dot / (na*nb) if na and nb else 0.0
+
+scored.sort(key=lambda x: x[2], reverse=True)
+return scored[:top_k]
+```
+
+This is brute force — every query pulls all 11 rows into memory and scores
+them all, O(n). Fine at this scale; a knowledge base with tens of thousands
+of chunks would need something like FAISS instead.
+
+## 5. How I built it, stage by stage
+
+1. **Chunked and embedded the documents** — split on paragraph boundaries,
+   turned each chunk into a vector, wrote it to SQLite.
+2. **Built retrieval** — embed the query too, find the closest chunks by
+   cosine similarity.
+3. **Wired up the model** — system prompt: "use only the given context;
+   say you don't know if it's not enough."
+4. **Added source citations** — prompt instruction: "name the source you
+   used, never invent one."
+5. **Added a relevance threshold** — weak chunks reaching the model caused
+   hallucination; anything below 0.55 now never gets sent at all.
+6. **Wrote the test suite** — 8 scenarios: answerable, unanswerable, and
+   general questions, all automated.
+
+I didn't know how to do any of these six steps when I started. What I
+actually walked away with is two habits: trace a bug to the layer it
+really comes from before touching the fix, and pick a number by measuring
+it, not by guessing.
+
+## Live demo
+
+Run `python3 app.py` (or `web_app.py` for the browser version) and ask:
 
 1. **An answerable question** — e.g. *"What programming languages does the
-   SDK support?"* — shows a correct, grounded answer with a source citation.
-2. **An out-of-scope question** — e.g. *"What is the capital of France?"* —
-   shows the assistant honestly declining instead of guessing. This is the
-   moment that proves it's not just calling a general chatbot API under the
-   hood.
-3. *(Optional, if time)* — a general/broad question like *"Tell me about
-   Foundry Local"* to show it can synthesize across multiple retrieved
-   chunks, not just quote one sentence.
-
-## 4. Lessons learned
-
-Fill this in with what actually surprised you while building — a few
-honest starting points from this project to adapt or replace:
-
-- **Retrieval quality matters more than prompt wording.** A real off-topic,
-  non-English test question ("what's the temperature tonight," asked in
-  Turkish) made the model produce garbled, hallucinated text instead of
-  declining — because the only chunks retrieved were weak matches, and our
-  English "say you don't know" instruction didn't transfer reliably to a
-  non-English response. The fix wasn't a better prompt; it was adding a
-  similarity-score cutoff so weak matches never reach the model at all.
-  Good retrieval is the first line of defense against hallucination, not
-  the prompt.
-- **A prompt that "doesn't work" may be a symptom, not the disease.** Asking
-  the model to cite its source was unreliable at first — it would cite on an
-  "I don't know" answer, or invent a source name. The instinct was to keep
-  rewording the prompt. What actually fixed it was the retrieval threshold:
-  once weak, irrelevant context stopped reaching the model, the *same*
-  prompt started citing correctly every time (5/5 in the latest run, none
-  fabricated). We only learned this by putting the original prompt back
-  after fixing retrieval, instead of assuming it was still broken.
-- **Trust, but verify — in the tests.** Citations are written by the model,
-  so they're a claim. `cited_sources()` checks each cited name against the
-  chunks that were really retrieved, and the test suite reports any
-  mismatch as fabricated. That way "are sources cited?" is measured, not
-  assumed.
-- **The order of operations matters in streaming code.** An early version
-  checked `chunk.choices[0]` before checking whether `chunk.choices` was
-  empty, which crashed on some stream chunks — a reminder that streaming
-  APIs don't guarantee every chunk looks like the "normal" one.
-- **Chunking is easy to skip — and worth verifying, not assuming.** It was
-  tempting to just embed whole documents. After splitting the longer document
-  into paragraph-sized chunks, we checked that a chunk from the *middle* of
-  it is genuinely reachable: asking "How does the SDK manage the model
-  lifecycle?" returns Overview part 2 as the top hit at 0.785, ahead of every
-  short FAQ line. (We never ran a before/after precision comparison, so
-  "chunking made retrieval better" stays an untested claim — what we can say
-  is that mid-document content is retrievable, which is the thing chunking
-  was supposed to buy us.)
-
-*(Swap in your own — these are seeded from what actually happened in this
-project's build log, not hypothetical.)*
-
-## Optional: naming / customizing
-
-The plan suggests naming the assistant and/or customizing the interface to
-build presentation confidence. The web UI (`templates/index.html`) is
-intentionally basic right now — a good place to add a name/logo before demo
-day if there's time, without touching any of the RAG logic.
+   SDK support?"* — a grounded answer with a source citation.
+2. **An out-of-scope question** — e.g. *"What is the capital of France?"*
+   — the assistant honestly declines instead of guessing.
+3. *(Optional)* — a broad question like *"Tell me about Foundry Local"* to
+   show it can synthesize across multiple retrieved chunks.
