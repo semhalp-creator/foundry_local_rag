@@ -155,11 +155,21 @@ python3 test_suite.py
   only weak/irrelevant chunks retrieved, the model produced garbled,
   hallucinated text instead of a clean decline — because our "say you don't
   know" instruction is written in English and doesn't reliably transfer to
-  a non-English response. Fixed with `MIN_RELEVANT_SCORE` in `app.py`: if
-  the best retrieved chunk's cosine similarity is below the threshold, the
+  a non-English response. Fixed with `MIN_RELEVANT_SCORE` in `app.py`: every
+  retrieved chunk is filtered against the threshold, and if none survive the
   chat model isn't called at all — a fixed fallback answer is returned
   directly. This is language-independent, faster (skips a model call), and
   is now a permanent regression test in `test_suite.py`.
+- **The threshold filters per chunk, not just the top one.** `top_k` caps how
+  many chunks come back; it doesn't promise they're all relevant. A query can
+  pull one strong match and one weak filler, and testing only the best score
+  would let that filler ride into the prompt — which is precisely the
+  low-relevance context that caused the hallucination above. With the current
+  11-chunk knowledge base this never triggers (all chunks are about the same
+  subject, so their scores cluster within ~0.15 of each other and pass or fail
+  together), but it will the moment the knowledge base grows or diversifies.
+  Verified by raising the threshold between two real scores and confirming
+  only the stronger chunk reached the model.
 - **Empty-input handling.** The CLI reprompts on a blank Enter instead of
   exiting; only typing `quit` ends the session (see `test_results.md` for
   how this was tested).

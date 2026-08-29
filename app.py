@@ -70,14 +70,16 @@ def answer_query(query, embedding_client, chat_client, top_k=2, verbose=True):
         for content, source, score in results:
             print(f"  [{score:.3f}] ({source}) {content}")
 
-    # If even the best-matching chunk is a weak match, don't hand it to the
-    # chat model at all - a low-relevance chunk plus a genuinely off-topic
-    # question is exactly when small models are most likely to hallucinate
-    # instead of cleanly declining (reproduced with a completely off-topic
-    # question whose best retrieved chunk scored below MIN_RELEVANT_SCORE).
-    # Skipping the model call here is also strictly faster.
-    best_score = results[0][2] if results else 0.0
-    if best_score < MIN_RELEVANT_SCORE:
+    # Drop every chunk below the threshold, not just check the best one.
+    # top_k is a cap on how many chunks we'll take, not a promise that all of
+    # them are relevant: a query can pull one strong match and one weak
+    # filler. Testing the best score alone would let that filler ride along
+    # into the prompt - a low-relevance chunk in the context is exactly what
+    # made the model hallucinate in the first place, so it gets cut whether
+    # it arrived first or second.
+    relevant = [r for r in results if r[2] >= MIN_RELEVANT_SCORE]
+
+    if not relevant:
         if verbose:
             print(f"Answer: {NO_MATCH_ANSWER}\n")
         # Return no chunks here, not `results` - those chunks were rejected
@@ -86,7 +88,11 @@ def answer_query(query, embedding_client, chat_client, top_k=2, verbose=True):
         # "Sources: ..." line under an "I don't know" answer.
         return NO_MATCH_ANSWER, []
 
-    context = "\n".join(f"- ({source}) {content}" for content, source, _score in results)
+    if verbose and len(relevant) < len(results):
+        dropped = len(results) - len(relevant)
+        print(f"  ({dropped} parça eşiğin altında kaldı, modele gönderilmedi)")
+
+    context = "\n".join(f"- ({source}) {content}" for content, source, _score in relevant)
 
     messages = [
         {
@@ -124,7 +130,9 @@ def answer_query(query, embedding_client, chat_client, top_k=2, verbose=True):
     if verbose:
         print(f"Answer: {full_answer}\n")
 
-    return full_answer, results
+    # `relevant`, not `results` - callers cite and verify against what the
+    # model was actually shown, so a chunk we dropped must not appear there.
+    return full_answer, relevant
 
 
 def main():
