@@ -29,8 +29,17 @@ def cited_sources(answer, results):
 # just the least-bad match, not relevant content - sending it to the model
 # anyway invites hallucination (observed concretely with off-topic/
 # non-English questions, where the model sometimes fails to say "I don't
-# know" cleanly). Chosen from this project's own test data: answerable
-# questions scored 0.65+, unanswerable ones scored under 0.5.
+# know" cleanly).
+#
+# Calibrated against 11 probe questions, not guessed:
+#
+#   answerable    0.628 .. 0.870   (lowest: "Does it support Rust?")
+#   unanswerable  0.333 .. 0.526   (highest: "What is my bank balance?")
+#
+# The separating gap is 0.526-0.628, so 0.55 sits inside it with a little
+# room on both sides. Note how tight the upper half is: raising this to
+# 0.65 would start rejecting real questions, and 0.68 would reject three of
+# the seven. Re-run that probe before changing this number.
 MIN_RELEVANT_SCORE = 0.55
 
 NO_MATCH_ANSWER = "I don't have information about that in my knowledge base."
